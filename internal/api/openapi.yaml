@@ -1,0 +1,2962 @@
+# Bu dosya scripts/gen_openapi.py ile üretilir.
+openapi: "3.0.3"
+info:
+  title: "DamarBağış API"
+  version: "1.0.0"
+  description: "Kan bağış merkezi ve kan bankası stok sistemi. Tüm hatalar {\"error\":{\"code\",\"message\",\"details\"}} biçimindedir."
+servers:
+  - url: "http://localhost:8080"
+security:
+  - bearer: []
+paths:
+  "/health":
+    get:
+      tags:
+        - "Sistem"
+      summary: "Sağlık durumu (veritabanı dahil)"
+      operationId: "get_health"
+      security: []
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Health"
+  "/metrics":
+    get:
+      tags:
+        - "Sistem"
+      summary: "Prometheus metrikleri (text/plain)"
+      operationId: "get_metrics"
+      security: []
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "text/plain":
+              schema:
+                type: "string"
+  "/auth/login":
+    post:
+      tags:
+        - "Kimlik"
+      summary: "Giriş; access + refresh token"
+      operationId: "post_auth_login"
+      security: []
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/LoginIn"
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Tokens"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/auth/refresh":
+    post:
+      tags:
+        - "Kimlik"
+      summary: "Refresh token rotasyonu (eski belirteç iptal edilir)"
+      operationId: "post_auth_refresh"
+      security: []
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/RefreshIn"
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Tokens"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/auth/logout":
+    post:
+      tags:
+        - "Kimlik"
+      summary: "Refresh token iptali"
+      operationId: "post_auth_logout"
+      security: []
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/RefreshIn"
+      responses:
+        "204":
+          description: "Başarılı"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/me":
+    get:
+      tags:
+        - "Kimlik"
+      summary: "Oturumdaki kullanıcı"
+      operationId: "get_api_v1_me"
+      description: "Roller: donor, nurse, lab, bank, hospital, admin"
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/User"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/hospitals":
+    get:
+      tags:
+        - "Kimlik"
+      summary: "Hastane listesi"
+      operationId: "get_api_v1_hospitals"
+      description: "Roller: donor, nurse, lab, bank, hospital, admin"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/compat":
+    get:
+      tags:
+        - "Tahsis"
+      summary: "ABO/Rh uyumlu verici grupları (tercih sırasıyla)"
+      operationId: "get_api_v1_compat"
+      description: "Roller: nurse, lab, bank, admin, hospital"
+      parameters:
+        - name: "component"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "group"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/live":
+    get:
+      tags:
+        - "Pano"
+      summary: "Canlı akış: son olaylar ve 5 dakikalık sayaçlar"
+      operationId: "get_api_v1_live"
+      description: "Roller: nurse, lab, bank, admin"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/stock":
+    get:
+      tags:
+        - "Stok"
+      summary: "Bileşen × kan grubu stok matrisi"
+      operationId: "get_api_v1_stock"
+      description: "Roller: nurse, lab, bank, admin"
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/StockRows"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/me/donor":
+    get:
+      tags:
+        - "Bağışçı"
+      summary: "Bağışçının kendi profili, uygunluk, geçmiş, randevular"
+      operationId: "get_api_v1_me_donor"
+      description: "Roller: donor"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/me/appointments":
+    post:
+      tags:
+        - "Bağışçı"
+      summary: "Kendine randevu al"
+      operationId: "post_api_v1_me_appointments"
+      description: "Roller: donor Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/AppointmentIn"
+      responses:
+        "201":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Appointment"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/me/appointments/{id}/cancel":
+    post:
+      tags:
+        - "Bağışçı"
+      summary: "Kendi randevusunu iptal et"
+      operationId: "post_api_v1_me_appointments_id_cancel"
+      description: "Roller: donor"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/donors":
+    get:
+      tags:
+        - "Bağışçı kaydı"
+      summary: "Bağışçı arama (keyset)"
+      operationId: "get_api_v1_donors"
+      description: "Roller: nurse, bank, admin"
+      parameters:
+        - name: "q"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "group"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "limit"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+        - name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/DonorList"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      tags:
+        - "Bağışçı kaydı"
+      summary: "Bağışçı kaydı (sağlık beyanı şifrelenir)"
+      operationId: "post_api_v1_donors"
+      description: "Roller: nurse, admin Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/DonorIn"
+      responses:
+        "201":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Donor"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/donors/{id}":
+    get:
+      tags:
+        - "Bağışçı kaydı"
+      summary: "Bağışçı kimlik bilgisi"
+      operationId: "get_api_v1_donors_id"
+      description: "Roller: nurse, lab, bank, admin"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Donor"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/donors/{id}/eligibility":
+    post:
+      tags:
+        - "Uygunluk"
+      summary: "Uygunluk kararı ve gerekçeleri (kayıt oluşturmaz)"
+      operationId: "post_api_v1_donors_id_eligibility"
+      description: "Roller: nurse, admin"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/EligibilityIn"
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Decision"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/donors/{id}/deferrals":
+    get:
+      tags:
+        - "Uygunluk"
+      summary: "Ertelemeler"
+      operationId: "get_api_v1_donors_id_deferrals"
+      description: "Roller: nurse, bank, admin"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      tags:
+        - "Uygunluk"
+      summary: "Erteleme ekle (bitiş, başlangıçtaki kural sürümüne göre)"
+      operationId: "post_api_v1_donors_id_deferrals"
+      description: "Roller: nurse, admin Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/DeferralIn"
+      responses:
+        "201":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/donors/{id}/health":
+    get:
+      tags:
+        - "Mahremiyet"
+      summary: "Şifreli sağlık beyanını oku (X-Access-Reason zorunlu, denetime yazılır)"
+      operationId: "get_api_v1_donors_id_health"
+      description: "Roller: nurse, admin"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+        - name: "X-Access-Reason"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/appointments":
+    get:
+      tags:
+        - "Randevu"
+      summary: "Güne / bağışçıya göre randevular"
+      operationId: "get_api_v1_appointments"
+      description: "Roller: nurse, admin"
+      parameters:
+        - name: "date"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "donor_id"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      tags:
+        - "Randevu"
+      summary: "Randevu ver (randevu gününde uygunluk denetlenir)"
+      operationId: "post_api_v1_appointments"
+      description: "Roller: nurse, admin Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/AppointmentIn"
+      responses:
+        "201":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Appointment"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/appointments/{id}/cancel":
+    post:
+      tags:
+        - "Randevu"
+      summary: "Randevu iptal"
+      operationId: "post_api_v1_appointments_id_cancel"
+      description: "Roller: nurse, admin"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/donations":
+    post:
+      tags:
+        - "Bağış"
+      summary: "Bağış kaydı (uygunluk sunucuda yeniden değerlendirilir; uygunsuzsa 422 donor_ineligible)"
+      operationId: "post_api_v1_donations"
+      description: "Roller: nurse, admin Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/DonationIn"
+      responses:
+        "201":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Donation"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+    get:
+      tags:
+        - "Bağış"
+      summary: "Bağışlar (pending=tests|components, keyset)"
+      operationId: "get_api_v1_donations"
+      description: "Roller: nurse, lab, bank, admin"
+      parameters:
+        - name: "pending"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "donor_id"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+        - name: "limit"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+        - name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/donations/{id}":
+    get:
+      tags:
+        - "Bağış"
+      summary: "Tek bağış"
+      operationId: "get_api_v1_donations_id"
+      description: "Roller: nurse, lab, bank, admin"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Donation"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/donations/{id}/components":
+    post:
+      tags:
+        - "Üretim"
+      summary: "Bileşen üretimi (RBC/PLT/FFP)"
+      operationId: "post_api_v1_donations_id_components"
+      description: "Roller: lab, admin Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/ComponentsIn"
+      responses:
+        "201":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/donations/{id}/test-results":
+    post:
+      tags:
+        - "Test"
+      summary: "İlk test sonucu; pozitifse tüm türevler (recursive) karantina + look-back"
+      operationId: "post_api_v1_donations_id_test_results"
+      description: "Roller: lab Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/Markers"
+      responses:
+        "201":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/TestOutcome"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/donations/{id}/test-changes":
+    post:
+      tags:
+        - "Test"
+      summary: "Test sonucu değişiklik talebi (1. onay)"
+      operationId: "post_api_v1_donations_id_test_changes"
+      description: "Roller: lab Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/TestChangeIn"
+      responses:
+        "201":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/test-changes":
+    get:
+      tags:
+        - "Test"
+      summary: "Değişiklik talepleri"
+      operationId: "get_api_v1_test_changes"
+      description: "Roller: lab, admin"
+      parameters:
+        - name: "status"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/test-changes/{id}/approve":
+    post:
+      tags:
+        - "Test"
+      summary: "2. onay (talebi açan onaylayamaz → 403 self_approval_forbidden)"
+      operationId: "post_api_v1_test_changes_id_approve"
+      description: "Roller: lab"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/test-changes/{id}/reject":
+    post:
+      tags:
+        - "Test"
+      summary: "Talebi reddet"
+      operationId: "post_api_v1_test_changes_id_reject"
+      description: "Roller: lab"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/products":
+    get:
+      tags:
+        - "Stok"
+      summary: "Ürünler (status, component, group filtreleri; sort=expiry FEFO; keyset)"
+      operationId: "get_api_v1_products"
+      description: "Roller: lab, bank, admin"
+      parameters:
+        - name: "status"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "component"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "group"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "sort"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "limit"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+        - name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/products/{id}":
+    get:
+      tags:
+        - "Stok"
+      summary: "Ürün ve geri alınamaz durum geçmişi"
+      operationId: "get_api_v1_products_id"
+      description: "Roller: lab, bank, admin"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/products/{id}/split":
+    post:
+      tags:
+        - "Stok"
+      summary: "Ürünü alt ürünlere böl (parent_id ile bağlı)"
+      operationId: "post_api_v1_products_id_split"
+      description: "Roller: bank Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/SplitIn"
+      responses:
+        "201":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/products/{id}/discard":
+    post:
+      tags:
+        - "Stok"
+      summary: "İmha (gerekçe zorunlu)"
+      operationId: "post_api_v1_products_id_discard"
+      description: "Roller: lab, bank"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/ReasonIn"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/products/{id}/transition":
+    post:
+      tags:
+        - "Stok"
+      summary: "Doğrudan durum geçişi (geçersizler 409 invalid_transition)"
+      operationId: "post_api_v1_products_id_transition"
+      description: "Roller: bank, admin"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/TransitionIn"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/products/verify":
+    get:
+      tags:
+        - "Stok"
+      summary: "İmzalı barkod doğrulama"
+      operationId: "get_api_v1_products_verify"
+      description: "Roller: nurse, lab, bank, admin, hospital"
+      parameters:
+        - name: "code"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/requests":
+    post:
+      tags:
+        - "Talep"
+      summary: "Hastane talebi; anında tahsis denenir"
+      operationId: "post_api_v1_requests"
+      description: "Roller: hospital Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/RequestIn"
+      responses:
+        "201":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Request"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+    get:
+      tags:
+        - "Talep"
+      summary: "Talepler (hastane yalnızca kendi taleplerini görür; keyset)"
+      operationId: "get_api_v1_requests"
+      description: "Roller: hospital, bank, admin"
+      parameters:
+        - name: "status"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "limit"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+        - name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/requests/{id}":
+    get:
+      tags:
+        - "Talep"
+      summary: "Talep ve rezervasyonlar (bağışçı bilgisi içermez)"
+      operationId: "get_api_v1_requests_id"
+      description: "Roller: hospital, bank, admin"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Request"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/requests/{id}/cancel":
+    post:
+      tags:
+        - "Talep"
+      summary: "Talebi iptal et"
+      operationId: "post_api_v1_requests_id_cancel"
+      description: "Roller: hospital, bank"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/requests/{id}/allocate":
+    post:
+      tags:
+        - "Tahsis"
+      summary: "Tahsis (uyum + FEFO, SKIP LOCKED; acil talep rutin rezervasyonu devralabilir)"
+      operationId: "post_api_v1_requests_id_allocate"
+      description: "Roller: bank Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/AllocateIn"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/requests/{id}/issue":
+    post:
+      tags:
+        - "Dağıtım"
+      summary: "Aktif rezervasyonları dağıt"
+      operationId: "post_api_v1_requests_id_issue"
+      description: "Roller: bank Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      responses:
+        "200":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Request"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/reservations":
+    get:
+      tags:
+        - "Tahsis"
+      summary: "Aktif rezervasyonlar"
+      operationId: "get_api_v1_reservations"
+      description: "Roller: bank, admin"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/reservations/{id}":
+    get:
+      tags:
+        - "Tahsis"
+      summary: "Rezervasyon durumu"
+      operationId: "get_api_v1_reservations_id"
+      description: "Roller: bank, admin"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/reservations/{id}/release":
+    post:
+      tags:
+        - "Tahsis"
+      summary: "Rezervasyonu bırak"
+      operationId: "post_api_v1_reservations_id_release"
+      description: "Roller: bank"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/hospital/products":
+    get:
+      tags:
+        - "Dağıtım"
+      summary: "Hastaneye dağıtılan ürünler"
+      operationId: "get_api_v1_hospital_products"
+      description: "Roller: hospital"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/transfusions":
+    post:
+      tags:
+        - "Dağıtım"
+      summary: "Transfüzyon kaydı"
+      operationId: "post_api_v1_transfusions"
+      description: "Roller: hospital Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/TransfusionIn"
+      responses:
+        "201":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/trace/donors/{id}":
+    get:
+      tags:
+        - "İzleme"
+      summary: "Bağışçı → hasta (recursive)"
+      operationId: "get_api_v1_trace_donors_id"
+      description: "Roller: bank, admin"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/trace/patients/{ref}":
+    get:
+      tags:
+        - "İzleme"
+      summary: "Hasta → bağışçı (look-back, recursive)"
+      operationId: "get_api_v1_trace_patients_ref"
+      description: "Roller: bank, admin"
+      parameters:
+        - name: "ref"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/forecast":
+    get:
+      tags:
+        - "Tahmin"
+      summary: "Grup bazında tüketim tahmini, yeterlilik ve SKT kaybı"
+      operationId: "get_api_v1_forecast"
+      description: "Roller: bank, admin"
+      parameters:
+        - name: "component"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "horizon"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/forecast/backtest":
+    get:
+      tags:
+        - "Tahmin"
+      summary: "Geriye dönük test (MAPE, WAPE)"
+      operationId: "get_api_v1_forecast_backtest"
+      description: "Roller: bank, admin"
+      parameters:
+        - name: "component"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "days"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/alerts":
+    get:
+      tags:
+        - "Tahmin"
+      summary: "Stok alarmları"
+      operationId: "get_api_v1_alerts"
+      description: "Roller: bank, admin"
+      parameters:
+        - name: "all"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/alerts/evaluate":
+    post:
+      tags:
+        - "Tahmin"
+      summary: "Alarmları hemen değerlendir"
+      operationId: "post_api_v1_alerts_evaluate"
+      description: "Roller: bank, admin"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/call-list":
+    get:
+      tags:
+        - "Tahmin"
+      summary: "Kritik grup için uygun bağışçı çağrı listesi"
+      operationId: "get_api_v1_call_list"
+      description: "Roller: bank, admin"
+      parameters:
+        - name: "group"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "limit"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/reports/summary":
+    get:
+      tags:
+        - "Rapor"
+      summary: "Dönem raporu"
+      operationId: "get_api_v1_reports_summary"
+      description: "Roller: bank, admin"
+      parameters:
+        - name: "from"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "to"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/users":
+    get:
+      tags:
+        - "Yönetim"
+      summary: "Kullanıcılar"
+      operationId: "get_api_v1_users"
+      description: "Roller: admin"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      tags:
+        - "Yönetim"
+      summary: "Kullanıcı ekle"
+      operationId: "post_api_v1_users"
+      description: "Roller: admin Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/UserIn"
+      responses:
+        "201":
+          description: "Başarılı"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/User"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/rules":
+    get:
+      tags:
+        - "Yönetim"
+      summary: "Kural sürümleri"
+      operationId: "get_api_v1_rules"
+      description: "Roller: admin, nurse, bank"
+      parameters:
+        - name: "code"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      tags:
+        - "Yönetim"
+      summary: "İleri tarihli kural sürümü ekle"
+      operationId: "post_api_v1_rules"
+      description: "Roller: admin Idempotency-Key başlığını destekler."
+      parameters:
+        - name: "Idempotency-Key"
+          in: "header"
+          required: false
+          schema:
+            type: "string"
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/RuleIn"
+      responses:
+        "201":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "409":
+          description: "Çakışma / geçersiz durum geçişi"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/v1/audit":
+    get:
+      tags:
+        - "Yönetim"
+      summary: "Denetim kaydı (keyset)"
+      operationId: "get_api_v1_audit"
+      description: "Roller: admin"
+      parameters:
+        - name: "action"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "entity"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "entity_id"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "limit"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+        - name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Başarılı"
+        "401":
+          description: "Kimlik doğrulama gerekli"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "403":
+          description: "Rol yetkisiz"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+        "422":
+          description: "Doğrulama hatası"
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/Error"
+components:
+  securitySchemes:
+    bearer:
+      type: "http"
+      scheme: "bearer"
+      bearerFormat: "JWT"
+  schemas:
+    Error:
+      type: "object"
+      properties:
+        error:
+          type: "object"
+          properties:
+            code:
+              type: "string"
+            message:
+              type: "string"
+            details: {}
+          required:
+            - "code"
+            - "message"
+      required:
+        - "error"
+    Health:
+      type: "object"
+      properties:
+        status:
+          type: "string"
+        checks:
+          type: "object"
+    LoginIn:
+      type: "object"
+      properties:
+        email:
+          type: "string"
+          format: "email"
+        password:
+          type: "string"
+      required:
+        - "email"
+        - "password"
+    RefreshIn:
+      type: "object"
+      properties:
+        refresh_token:
+          type: "string"
+      required:
+        - "refresh_token"
+    User:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        email:
+          type: "string"
+        role:
+          type: "string"
+          enum:
+            - "donor"
+            - "nurse"
+            - "lab"
+            - "bank"
+            - "hospital"
+            - "admin"
+        full_name:
+          type: "string"
+        hospital_id:
+          type: "integer"
+          nullable: true
+        donor_id:
+          type: "integer"
+          nullable: true
+    Tokens:
+      type: "object"
+      properties:
+        access_token:
+          type: "string"
+        refresh_token:
+          type: "string"
+        expires_at:
+          type: "string"
+          format: "date-time"
+        user:
+          "$ref": "#/components/schemas/User"
+    HealthInfo:
+      type: "object"
+      properties:
+        medications:
+          type: "array"
+          items:
+            type: "string"
+        conditions:
+          type: "array"
+          items:
+            type: "string"
+        notes:
+          type: "string"
+    DonorIn:
+      type: "object"
+      properties:
+        first_name:
+          type: "string"
+        last_name:
+          type: "string"
+        sex:
+          type: "string"
+          enum:
+            - "M"
+            - "F"
+        birth_date:
+          type: "string"
+          format: "date"
+        abo:
+          type: "string"
+          enum:
+            - "O"
+            - "A"
+            - "B"
+            - "AB"
+        rh_positive:
+          type: "boolean"
+        phone:
+          type: "string"
+        email:
+          type: "string"
+        health:
+          "$ref": "#/components/schemas/HealthInfo"
+      required:
+        - "first_name"
+        - "last_name"
+        - "sex"
+        - "birth_date"
+        - "abo"
+        - "rh_positive"
+    Donor:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        donor_no:
+          type: "string"
+        first_name:
+          type: "string"
+        last_name:
+          type: "string"
+        sex:
+          type: "string"
+        birth_date:
+          type: "string"
+          format: "date"
+        group:
+          type: "string"
+        phone:
+          type: "string"
+    DonorList:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/Donor"
+        next_cursor:
+          type: "integer"
+          nullable: true
+    EligibilityIn:
+      type: "object"
+      properties:
+        donation_type:
+          type: "string"
+          enum:
+            - "whole_blood"
+            - "platelet_apheresis"
+        at:
+          type: "string"
+          format: "date"
+        measurements:
+          type: "object"
+          properties:
+            hemoglobin:
+              type: "number"
+            weight_kg:
+              type: "number"
+        declarations:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              code:
+                type: "string"
+              date:
+                type: "string"
+                format: "date"
+    Decision:
+      type: "object"
+      properties:
+        eligible:
+          type: "boolean"
+        reasons:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              code:
+                type: "string"
+              message:
+                type: "string"
+              until:
+                type: "string"
+                format: "date-time"
+              permanent:
+                type: "boolean"
+        next_eligible_at:
+          type: "string"
+          format: "date-time"
+          nullable: true
+        rule_version:
+          type: "string"
+    DeferralIn:
+      type: "object"
+      properties:
+        reason_code:
+          type: "string"
+        starts_on:
+          type: "string"
+          format: "date"
+        note:
+          type: "string"
+      required:
+        - "reason_code"
+    AppointmentIn:
+      type: "object"
+      properties:
+        donor_id:
+          type: "integer"
+        scheduled_at:
+          type: "string"
+          format: "date-time"
+        donation_type:
+          type: "string"
+      required:
+        - "scheduled_at"
+    Appointment:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        donor_id:
+          type: "integer"
+        scheduled_at:
+          type: "string"
+          format: "date-time"
+        status:
+          type: "string"
+    DonationIn:
+      type: "object"
+      properties:
+        donor_id:
+          type: "integer"
+        appointment_id:
+          type: "integer"
+        donation_type:
+          type: "string"
+        volume_ml:
+          type: "integer"
+        hemoglobin:
+          type: "number"
+        weight_kg:
+          type: "number"
+        declarations:
+          type: "array"
+          items:
+            type: "object"
+        collected_at:
+          type: "string"
+          format: "date-time"
+      required:
+        - "donor_id"
+        - "volume_ml"
+        - "hemoglobin"
+        - "weight_kg"
+    Donation:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        donor_id:
+          type: "integer"
+        donation_type:
+          type: "string"
+        collected_at:
+          type: "string"
+          format: "date-time"
+        bag_no:
+          type: "string"
+        test_outcome:
+          type: "string"
+          nullable: true
+        products:
+          type: "integer"
+    ComponentsIn:
+      type: "object"
+      properties:
+        components:
+          type: "array"
+          items:
+            type: "string"
+            enum:
+              - "RBC"
+              - "PLT"
+              - "FFP"
+    Markers:
+      type: "object"
+      properties:
+        hiv:
+          type: "boolean"
+        hbv:
+          type: "boolean"
+        hcv:
+          type: "boolean"
+        syphilis:
+          type: "boolean"
+      required:
+        - "hiv"
+        - "hbv"
+        - "hcv"
+        - "syphilis"
+    TestOutcome:
+      type: "object"
+      properties:
+        donation_id:
+          type: "integer"
+        outcome:
+          type: "string"
+        released:
+          type: "integer"
+        quarantined:
+          type: "array"
+          items:
+            type: "object"
+        recalls:
+          type: "array"
+          items:
+            type: "object"
+        lookback_donations:
+          type: "array"
+          items:
+            type: "integer"
+    TestChangeIn:
+      type: "object"
+      properties:
+        proposed:
+          "$ref": "#/components/schemas/Markers"
+        reason:
+          type: "string"
+      required:
+        - "proposed"
+        - "reason"
+    SplitIn:
+      type: "object"
+      properties:
+        parts:
+          type: "integer"
+          minimum: 2
+          maximum: 4
+      required:
+        - "parts"
+    ReasonIn:
+      type: "object"
+      properties:
+        reason:
+          type: "string"
+      required:
+        - "reason"
+    TransitionIn:
+      type: "object"
+      properties:
+        to:
+          type: "string"
+        reason:
+          type: "string"
+      required:
+        - "to"
+        - "reason"
+    StockRows:
+      type: "array"
+      items:
+        type: "object"
+        properties:
+          component:
+            type: "string"
+          group:
+            type: "string"
+          available:
+            type: "integer"
+          reserved:
+            type: "integer"
+          pending_test:
+            type: "integer"
+          expiring_48h:
+            type: "integer"
+          alert:
+            type: "string"
+            nullable: true
+    RequestIn:
+      type: "object"
+      properties:
+        component:
+          type: "string"
+          enum:
+            - "RBC"
+            - "PLT"
+            - "FFP"
+        group:
+          type: "string"
+          example: "A+"
+        units:
+          type: "integer"
+          minimum: 1
+          maximum: 20
+        urgency:
+          type: "string"
+          enum:
+            - "routine"
+            - "urgent"
+            - "emergency"
+        patient_ref:
+          type: "string"
+        needed_by:
+          type: "string"
+          format: "date-time"
+      required:
+        - "component"
+        - "group"
+        - "units"
+        - "patient_ref"
+    Request:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        hospital_name:
+          type: "string"
+        component:
+          type: "string"
+        group:
+          type: "string"
+        units:
+          type: "integer"
+        urgency:
+          type: "string"
+        patient_ref:
+          type: "string"
+        status:
+          type: "string"
+        reservations:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              id:
+                type: "integer"
+              product_no:
+                type: "string"
+              group:
+                type: "string"
+              product_expires_at:
+                type: "string"
+                format: "date-time"
+              status:
+                type: "string"
+              hold_until:
+                type: "string"
+                format: "date-time"
+              exact_match:
+                type: "boolean"
+    AllocateIn:
+      type: "object"
+      properties:
+        ttl_seconds:
+          type: "integer"
+    TransfusionIn:
+      type: "object"
+      properties:
+        product_no:
+          type: "string"
+        patient_ref:
+          type: "string"
+      required:
+        - "product_no"
+        - "patient_ref"
+    UserIn:
+      type: "object"
+      properties:
+        email:
+          type: "string"
+        password:
+          type: "string"
+        role:
+          type: "string"
+        full_name:
+          type: "string"
+        hospital_id:
+          type: "integer"
+        donor_id:
+          type: "integer"
+      required:
+        - "email"
+        - "password"
+        - "role"
+        - "full_name"
+    RuleIn:
+      type: "object"
+      properties:
+        code:
+          type: "string"
+          enum:
+            - "eligibility"
+            - "shelf_life"
+        valid_from:
+          type: "string"
+          format: "date"
+        note:
+          type: "string"
+        params:
+          type: "object"
+      required:
+        - "code"
+        - "valid_from"
+        - "params"
