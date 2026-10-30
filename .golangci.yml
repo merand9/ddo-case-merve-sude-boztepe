@@ -1,0 +1,20 @@
+run:
+  timeout: 5m
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - gosimple
+    - gofmt
+    - bodyclose
+    - nilerr
+linters-settings:
+  errcheck:
+    exclude-functions:
+      - (github.com/jackc/pgx/v5/pgxpool.Conn).Exec
+issues:
+  exclude-dirs:
+    - web

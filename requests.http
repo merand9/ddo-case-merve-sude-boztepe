@@ -1,0 +1,353 @@
+### DamarBağış — elle deneme koleksiyonu (VS Code REST Client)
+### Sırayla çalıştırın: giriş istekleri belirteçleri değişkenlere yazar.
+@base = http://localhost:8080
+@pw = Demo1234!
+
+### Sağlık
+GET {{base}}/health
+
+### Metrikler
+GET {{base}}/metrics
+
+### OpenAPI
+GET {{base}}/openapi.yaml
+
+# ───────────── Giriş (her rol) ─────────────
+
+# @name admin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"email":"admin@damarbagis.local","password":"{{pw}}"}
+
+###
+# @name nurse
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"email":"hemsire@damarbagis.local","password":"{{pw}}"}
+
+###
+# @name lab
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"email":"lab@damarbagis.local","password":"{{pw}}"}
+
+###
+# @name lab2
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"email":"lab2@damarbagis.local","password":"{{pw}}"}
+
+###
+# @name bank
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"email":"bankasorumlusu@damarbagis.local","password":"{{pw}}"}
+
+###
+# @name hosp
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"email":"hastane@damarbagis.local","password":"{{pw}}"}
+
+###
+# @name donor
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"email":"bagisci@damarbagis.local","password":"{{pw}}"}
+
+###
+@A = Bearer {{admin.response.body.access_token}}
+@N = Bearer {{nurse.response.body.access_token}}
+@L = Bearer {{lab.response.body.access_token}}
+@L2 = Bearer {{lab2.response.body.access_token}}
+@K = Bearer {{bank.response.body.access_token}}
+@H = Bearer {{hosp.response.body.access_token}}
+@D = Bearer {{donor.response.body.access_token}}
+
+### Yanlış parola → 401
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"email":"admin@damarbagis.local","password":"yanlis"}
+
+### Refresh (rotasyon)
+POST {{base}}/auth/refresh
+Content-Type: application/json
+
+{"refresh_token":"{{admin.response.body.refresh_token}}"}
+
+### Yetki ihlali: hastane bağışçı listesine erişemez → 403
+GET {{base}}/api/v1/donors
+Authorization: {{H}}
+
+### Oturumdaki kullanıcı
+GET {{base}}/api/v1/me
+Authorization: {{N}}
+
+# ───────────── F-1 Bağışçı kaydı ve uygunluk ─────────────
+
+# @name newDonor
+POST {{base}}/api/v1/donors
+Authorization: {{N}}
+Content-Type: application/json
+Idempotency-Key: rest-donor-0001
+
+{"first_name":"Elif","last_name":"Deneme","sex":"F","birth_date":"1996-02-14","abo":"A","rh_positive":true,"phone":"+90 555 111 2233",
+ "health":{"medications":["levotiroksin"],"conditions":[]}}
+
+###
+@donorId = {{newDonor.response.body.id}}
+
+### Uygunluk (uygun)
+POST {{base}}/api/v1/donors/{{donorId}}/eligibility
+Authorization: {{N}}
+Content-Type: application/json
+
+{"donation_type":"whole_blood","measurements":{"hemoglobin":13.4,"weight_kg":61}}
+
+### Uygunluk (düşük Hb + seyahat beyanı → gerekçeli red)
+POST {{base}}/api/v1/donors/{{donorId}}/eligibility
+Authorization: {{N}}
+Content-Type: application/json
+
+{"measurements":{"hemoglobin":11.8,"weight_kg":61},"declarations":[{"code":"travel_malaria","date":"2026-09-01"}]}
+
+### Bağışçı arama (keyset)
+GET {{base}}/api/v1/donors?q=yıl&limit=10
+Authorization: {{N}}
+
+### Sağlık verisi — gerekçesiz → 400
+GET {{base}}/api/v1/donors/{{donorId}}/health
+Authorization: {{N}}
+
+### Sağlık verisi — gerekçeli (denetime yazılır)
+GET {{base}}/api/v1/donors/{{donorId}}/health
+Authorization: {{N}}
+X-Access-Reason: Bağış öncesi muayene ilaç kontrolü
+
+### Erteleme ekle
+POST {{base}}/api/v1/donors/{{donorId}}/deferrals
+Authorization: {{N}}
+Content-Type: application/json
+
+{"reason_code":"dental","starts_on":"2026-10-01","note":"diş çekimi"}
+
+# ───────────── F-2 Randevu ve bağış ─────────────
+
+### Randevu
+# @name appt
+POST {{base}}/api/v1/appointments
+Authorization: {{N}}
+Content-Type: application/json
+
+{"donor_id":{{donorId}},"scheduled_at":"2026-12-15T09:30:00Z"}
+
+### Bağış kaydı (aynı Idempotency-Key ile iki kez gönderin → aynı yanıt)
+# @name donation
+POST {{base}}/api/v1/donations
+Authorization: {{N}}
+Content-Type: application/json
+Idempotency-Key: rest-donation-0001
+
+{"donor_id":{{donorId}},"volume_ml":450,"hemoglobin":13.4,"weight_kg":61}
+
+###
+@donationId = {{donation.response.body.id}}
+
+### İkinci bağış → 422 INTERVAL_NOT_ELAPSED
+POST {{base}}/api/v1/donations
+Authorization: {{N}}
+Content-Type: application/json
+
+{"donor_id":{{donorId}},"volume_ml":450,"hemoglobin":13.4,"weight_kg":61}
+
+# ───────────── F-4 / F-3 Üretim, test, karantina ─────────────
+
+### Bileşen üretimi
+POST {{base}}/api/v1/donations/{{donationId}}/components
+Authorization: {{L}}
+Content-Type: application/json
+
+{}
+
+### Test sonucu (negatif → ürünler stokta)
+POST {{base}}/api/v1/donations/{{donationId}}/test-results
+Authorization: {{L}}
+Content-Type: application/json
+
+{"hiv":false,"hbv":false,"hcv":false,"syphilis":false}
+
+### Test sonucu düzeltme talebi (1. onay)
+# @name change
+POST {{base}}/api/v1/donations/{{donationId}}/test-changes
+Authorization: {{L}}
+Content-Type: application/json
+
+{"proposed":{"hiv":false,"hbv":true,"hcv":false,"syphilis":false},"reason":"Doğrulama testi reaktif"}
+
+### Aynı kişi onaylayamaz → 403
+POST {{base}}/api/v1/test-changes/{{change.response.body.id}}/approve
+Authorization: {{L}}
+
+### İkinci uzman onaylar → tüm türevler (bölünmüşler dahil) karantina
+POST {{base}}/api/v1/test-changes/{{change.response.body.id}}/approve
+Authorization: {{L2}}
+
+### Test bekleyen bağışlar
+GET {{base}}/api/v1/donations?pending=tests&limit=10
+Authorization: {{L}}
+
+# ───────────── F-5 Stok ─────────────
+
+### Stok matrisi
+GET {{base}}/api/v1/stock
+Authorization: {{K}}
+
+### Ürünler (A+ eritrosit, FEFO)
+GET {{base}}/api/v1/products?status=available&component=RBC&group=A%2B&sort=expiry&limit=10
+Authorization: {{K}}
+
+### Ürünler (keyset sayfa 1)
+GET {{base}}/api/v1/products?status=available&limit=5
+Authorization: {{K}}
+
+### Uyum sırası (A+ eritrosit)
+GET {{base}}/api/v1/compat?component=RBC&group=A%2B
+Authorization: {{H}}
+
+# ───────────── F-6 / T-3 Talep ve rezervasyon ─────────────
+
+# @name req
+POST {{base}}/api/v1/requests
+Authorization: {{H}}
+Content-Type: application/json
+Idempotency-Key: rest-request-0001
+
+{"component":"RBC","group":"A+","units":2,"urgency":"urgent","patient_ref":"PRT-2026-0042"}
+
+###
+@reqId = {{req.response.body.id}}
+
+### Talep detayı (bağışçı bilgisi içermez)
+GET {{base}}/api/v1/requests/{{reqId}}
+Authorization: {{H}}
+
+### Çok acil talep
+POST {{base}}/api/v1/requests
+Authorization: {{H}}
+Content-Type: application/json
+
+{"component":"RBC","group":"O-","units":1,"urgency":"emergency","patient_ref":"PRT-ACIL-7"}
+
+### Aktif rezervasyonlar
+GET {{base}}/api/v1/reservations
+Authorization: {{K}}
+
+### Kısa süreli yeniden tahsis (önce rezervasyonu bırakın)
+POST {{base}}/api/v1/requests/{{reqId}}/allocate
+Authorization: {{K}}
+Content-Type: application/json
+
+{"ttl_seconds":5}
+
+# ───────────── F-7 Dağıtım, transfüzyon, rapor ─────────────
+
+### Dağıt
+POST {{base}}/api/v1/requests/{{reqId}}/issue
+Authorization: {{K}}
+
+### Hastanenin ürünleri
+GET {{base}}/api/v1/hospital/products
+Authorization: {{H}}
+
+### Transfüzyon (product_no'yu yukarıdaki yanıttan alın)
+POST {{base}}/api/v1/transfusions
+Authorization: {{H}}
+Content-Type: application/json
+
+{"product_no":"P00000001","patient_ref":"PRT-2026-0042"}
+
+### Dönem raporu
+GET {{base}}/api/v1/reports/summary?from=2026-10-01&to=2026-11-01
+Authorization: {{K}}
+
+# ───────────── T-2 Geri izleme ─────────────
+
+### Bağışçı → hasta
+GET {{base}}/api/v1/trace/donors/{{donorId}}
+Authorization: {{K}}
+
+### Hasta → bağışçı (look-back)
+GET {{base}}/api/v1/trace/patients/PRT-2026-0042
+Authorization: {{K}}
+
+### Ürün geçmişi (geri alınamaz olaylar)
+GET {{base}}/api/v1/products/1
+Authorization: {{K}}
+
+### Geçersiz geçiş → 409
+POST {{base}}/api/v1/products/1/transition
+Authorization: {{K}}
+Content-Type: application/json
+
+{"to":"available","reason":"geri alma denemesi"}
+
+# ───────────── T-4 Tahmin ─────────────
+
+### Tahmin
+GET {{base}}/api/v1/forecast?component=RBC&horizon=7
+Authorization: {{K}}
+
+### Backtest (MAPE / WAPE)
+GET {{base}}/api/v1/forecast/backtest?component=RBC&days=28
+Authorization: {{K}}
+
+### Alarmları değerlendir
+POST {{base}}/api/v1/alerts/evaluate
+Authorization: {{K}}
+
+### Çağrı listesi
+GET {{base}}/api/v1/call-list?group=O-&limit=20
+Authorization: {{K}}
+
+# ───────────── Bağışçı ekranı ─────────────
+
+### Kendi profilim
+GET {{base}}/api/v1/me/donor
+Authorization: {{D}}
+
+### Randevu al
+POST {{base}}/api/v1/me/appointments
+Authorization: {{D}}
+Content-Type: application/json
+
+{"scheduled_at":"2026-11-20T10:00:00Z"}
+
+# ───────────── Yönetim ─────────────
+
+### Kullanıcılar
+GET {{base}}/api/v1/users
+Authorization: {{A}}
+
+### Kural sürümleri
+GET {{base}}/api/v1/rules?code=eligibility
+Authorization: {{A}}
+
+### Denetim kaydı (sağlık verisi erişimleri)
+GET {{base}}/api/v1/audit?action=donor.health.read&limit=20
+Authorization: {{A}}
+
+### Canlı akış
+GET {{base}}/api/v1/live
+Authorization: {{K}}
+
+### Barkod doğrulama
+GET {{base}}/api/v1/products/verify?code=P00000001.XXXXXXXXXX
+Authorization: {{H}}
