@@ -1,0 +1,10 @@
+.git
+.github
+web
+loadtest
+docs
+scripts
+*.md
+.env
+coverage*
+bin
