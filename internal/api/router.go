@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -465,7 +466,12 @@ func (s *Server) readHealth(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h, err := s.App.ReadHealth(r.Context(), id, r.Header.Get("X-Access-Reason"))
+	// Tarayıcılar başlıkta ASCII dışı karakter gönderemez; ön yüz gerekçeyi yüzde-kodlar.
+	reason := r.Header.Get("X-Access-Reason")
+	if dec, err := url.PathUnescape(reason); err == nil {
+		reason = dec
+	}
+	h, err := s.App.ReadHealth(r.Context(), id, reason)
 	if err != nil {
 		return err
 	}

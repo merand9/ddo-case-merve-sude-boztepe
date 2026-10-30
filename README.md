@@ -2,7 +2,7 @@
 
 **Merve Sude Boztepe** · DDO Yazılım Ekibi alım projesi
 
-Bölge kan merkezi için bağışçı kabulü, uygunluk, randevu, test ve karantina, bileşen üretimi, stok, hastane talepleri, tahsis, dağıtım, geri izleme ve stok tahmini sistemi. Backend Go, veritabanı PostgreSQL 16, ön yüz derleme adımı olmayan bir tek sayfa uygulamadır. Sistem Docker Compose ile tek komutla ayağa kalkar.
+Bölge kan merkezi için bağışçı kabulü, uygunluk, randevu, test ve karantina, bileşen üretimi, stok, hastane talepleri, tahsis, dağıtım, geri izleme ve stok tahmini sistemi. Backend Go, veritabanı PostgreSQL 16, ön yüz React (Vite + TypeScript) tek sayfa uygulamasıdır. Sistem Docker Compose ile tek komutla ayağa kalkar.
 
 > Doğrulama rehberi: [TESTING.md](TESTING.md) · Mimari kararlar: [DECISIONS.md](DECISIONS.md) · API: `http://localhost:8080/openapi.yaml` · Elle deneme: [requests.http](requests.http)
 
@@ -81,7 +81,13 @@ internal/
   auth/        argon2id, JWT, refresh token
   metrics/     Prometheus metin biçimi
   sim/         deterministik seed üretici + COPY yükleyici
-web/           index.html, app.js, app.css, nginx.conf
+web/           React + Vite + TypeScript ön yüz
+  src/api.ts        API istemcisi (JWT, sessiz refresh, Idempotency-Key) + tipler
+  src/auth.tsx      oturum bağlamı
+  src/hooks.ts      useApi: yükleniyor / veri / hata / periyodik yenileme
+  src/components/   ortak bileşenler (AsyncView, Form, StockMatrix, DecisionBox …), menü
+  src/pages/        rol bazlı ekranlar (13 sayfa, sayfa başına ayrı paket)
+  nginx.conf        statik dosyalar + /api vekili + istemci tarafı yönlendirme
 ```
 
 ### Temel tasarım kararları (ayrıntı: [DECISIONS.md](DECISIONS.md))
@@ -91,7 +97,7 @@ web/           index.html, app.js, app.css, nginx.conf
 - **Geri alınamaz kayıt.** Ürün durum makinesi veritabanı tetikleyicisinde zorlanır. Her geçiş `product_events` tablosuna yazılır. `product_events` ve `audit_log` tablolarında UPDATE, DELETE ve TRUNCATE yasaktır. Test sonucu yalnızca çift onaylı bir talep varken güncellenebilir (bu da tetikleyiciyle denetlenir).
 - **Zaman geçerlilikli kurallar.** `rule_versions` + `EXCLUDE USING gist (daterange)`. Karar, karar anındaki sürüme göre verilir ve `rule_version` alanında döner.
 - **Mahremiyet.** Sağlık beyanı AES-256-GCM ile şifrelenir (AAD = bağışçı no). Erişimde gerekçe zorunludur ve okuma ile denetim kaydı aynı transaction'da yapılır. Hastaneler yalnızca bağışçı sütunu içermeyen `hospital_products` görünümünü kullanır.
-- **Ön yüz seçimi:** Bağımlılıksız vanilla JS + nginx. Derleme adımı ve `npm install` yok, soğuk açılış hızlı. Ekranlar form ve tablo ağırlıklı olduğu için framework kazancı sınırlı (ADR-008). Her ekran yükleniyor / boş / hata durumlarını gösterir; mobil genişlikte kullanılabilir.
+- **Ön yüz seçimi:** React 19 + Vite + TypeScript + React Router; tahmin ekranındaki grafikler için Recharts (ADR-008). API yanıtları TypeScript tipleriyle karşılanır. Her ekran ortak `AsyncView` bileşeniyle yükleniyor / boş / hata durumlarını gösterir. Sayfalar ayrı paketlere bölünür (ilk yük ≈ 90 KB gzip). Mobil genişlikte kullanılabilir. Geliştirme için `cd web && npm install && npm run dev` (API isteklerini :8080'e vekil eder).
 
 ### Ortak teknik gereksinimler nasıl karşılandı
 

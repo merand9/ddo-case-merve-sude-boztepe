@@ -50,7 +50,7 @@ Tüm hesapların parolası: **`Demo1234!`** (`.env` → `DEMO_PASSWORD`)
 | `IDEM` | Aynı anahtar + farklı gövde | `422 idempotency_key_reused` | `make verify` |
 | `OBS` | `GET /metrics`, `GET /openapi.yaml` | Prometheus metin biçimi; geçerli OpenAPI 3 | `make verify` |
 | `SIM` | Simülatör | ≥30.000 bağışçı, tek seed kaydı + parmak izi; son 2 dakikada canlı olay; reddedilen uygunsuz denemeler | `make verify`, `go test ./internal/sim -run SameSeed` |
-| `WEB` | `http://localhost:3000` | Ön yüz açılır, `/health` nginx üzerinden API'ye vekil edilir | `make verify` |
+| `WEB` | `http://localhost:3000` | React paketi sunulur, derin bağlantı (`/forecast`) çalışır, `/health` nginx üzerinden API'ye vekil edilir | `make verify`, `cd web && npm test` |
 
 ### Örnek `make verify` çıktısı (yerel çalıştırma)
 
@@ -97,6 +97,7 @@ Toplam: 21, başarılı: 21, başarısız: 0
 9. **Stok** (`bankasorumlusu`): Bir eritrositi *Böl*; alt ürünler "(alt)" olarak listelenir. Ürün satırındaki barkodu kopyalayıp *İmzalı barkod doğrulama*'ya yapıştırın; bir karakteri değiştirince imza geçersiz olur.
 10. **Bağışçı** (`bagisci`): Uygunluk durumu, randevu alma ve randevu hatırlatma kartı.
 11. **Mobil**: Tarayıcıyı 390 px genişliğe daraltın; menü yatay kayar, tablolar yatay kaydırılır.
+12. **Derin bağlantı ve oturum**: `http://localhost:3000/forecast` adresini doğrudan açın. Oturum yoksa giriş ekranına, giriş sonrası tekrar tahmin sayfasına dönülür. Yetkisiz rolle açılırsa rolün ana ekranına yönlendirilir.
 
 ## (d) Zorlu görev kanıt komutları
 

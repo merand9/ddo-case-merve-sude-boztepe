@@ -87,7 +87,7 @@ func main() {
 		{"IDEM", "Idempotency-Key: aynı anahtar farklı gövde → 422", checkIdem},
 		{"OBS", "Prometheus /metrics ve OpenAPI", checkObs},
 		{"SIM", "Simülatör: 30.000 bağışçı seed + canlı olaylar", checkSim},
-		{"WEB", "Ön yüz ve API vekili (nginx)", checkWeb},
+		{"WEB", "React ön yüzü ve API vekili (nginx)", checkWeb},
 	}
 	var results []result
 	failed := 0
@@ -812,7 +812,7 @@ func checkT5(s *state) (string, error) {
 	var h struct {
 		Medications []string `json:"medications"`
 	}
-	if err := s.callHdr("hemsire", "GET", fmt.Sprintf("/api/v1/donors/%d/health", d), nil, 200, &h, map[string]string{"X-Access-Reason": reason}); err != nil {
+	if err := s.callHdr("hemsire", "GET", fmt.Sprintf("/api/v1/donors/%d/health", d), nil, 200, &h, map[string]string{"X-Access-Reason": url.PathEscape(reason)}); err != nil {
 		return "", err
 	}
 	if len(h.Medications) != 1 || h.Medications[0] != secret {
@@ -829,7 +829,7 @@ func checkT5(s *state) (string, error) {
 	if len(au.Items) == 0 || au.Items[0].Reason != reason {
 		return "", fmt.Errorf("erişim gerekçesiyle denetime yazılmamış")
 	}
-	notes = append(notes, "gerekçesiz 400, gerekçeli okuma denetimde")
+	notes = append(notes, "gerekçesiz 400, gerekçeli (Türkçe, yüzde-kodlu) okuma denetimde")
 	// Çift onay: aynı kişi onaylayamaz
 	p, err := s.donateProduce("M", "O", true)
 	if err != nil {
@@ -973,12 +973,28 @@ func checkWeb(s *state) (string, error) {
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("nginx → API vekili çalışmıyor: %d", resp.StatusCode)
 	}
-	resp, err = client.Get(web + "/app.js")
+	// Vite paketi: index.html içindeki /assets/*.js dosyası sunuluyor mu?
+	i := strings.Index(string(b), "/assets/")
+	if i < 0 {
+		return "", fmt.Errorf("index.html içinde /assets/ paketi yok")
+	}
+	j := strings.IndexByte(string(b[i:]), '"')
+	asset := string(b[i : i+j])
+	resp, err = client.Get(web + asset)
 	if err != nil {
 		return "", err
 	}
 	resp.Body.Close()
-	return "index, statik dosyalar ve /health vekili 200", expect(resp.StatusCode == 200, "app.js yok")
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("%s sunulmuyor: %d", asset, resp.StatusCode)
+	}
+	// İstemci tarafı yönlendirme: derin bağlantı index.html'e düşmeli.
+	resp, err = client.Get(web + "/forecast")
+	if err != nil {
+		return "", err
+	}
+	resp.Body.Close()
+	return "React paketi, derin bağlantı (/forecast) ve /health vekili 200", expect(resp.StatusCode == 200, "derin bağlantı 404")
 }
 
 // ---------------- yardımcılar ----------------

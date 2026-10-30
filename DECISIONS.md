@@ -88,13 +88,23 @@ Her kayıt: bağlam → karar → sonuçlar (artı/eksi) → değerlendirilen al
 
 ---
 
-## ADR-008 — Ön yüz: derleme adımsız, bağımlılıksız tek sayfa uygulama (vanilla JS + nginx)
+## ADR-008 — Ön yüz: React 19 + Vite + TypeScript, nginx ile servis
 
-**Bağlam.** Ön yüz serbest bırakılmış. Değerlendirmede sistemin hızlı ayağa kalkması, gerçek veriyle çalışması ve mobilde kullanılabilir olması bekleniyor.
+**Bağlam.** Ön yüz teknolojisi serbest. Değerlendirmede gerçek veriyle çalışma, her ekranda yükleniyor / boş / hata durumları, mobil kullanılabilirlik ve kodun okunabilirliği bekleniyor. İlk sürüm bağımlılıksız vanilla JS ile yazılmıştı; ekran sayısı 13'e çıkınca tekrar eden HTML şablonları ve tip güvenliği eksikliği bakım maliyeti yaratmaya başladı.
 
-**Karar.** Hash tabanlı yönlendirmeyle çalışan tek bir `app.js` (~700 satır) ve CSS değişkenleriyle yazılmış bir stil dosyası kullanılır. Her ekran ortak `section()` yardımcısıyla yükleniyor / boş / hata durumlarını gösterir. Durum değiştiren POST isteklerine otomatik `Idempotency-Key` eklenir ve gönderim düğmesi istek süresince kilitlenir. 401 alındığında refresh token ile sessizce yenileme yapılır. nginx `/api` ve `/auth` isteklerini API'ye vekil eder, böylece tarayıcı tek origin ile çalışır ve CORS gerekmez. CSP `script-src 'self'` olarak ayarlıdır (inline script yok; yalnızca stil öznitelikleri için `style-src 'unsafe-inline'`).
+**Karar.**
+- **React 19 + React Router 7:** Rol korumalı rotalar (`Guard`), sayfa başına `lazy()` ile ayrı paketler.
+- **TypeScript (strict):** API yanıtlarının tipleri `src/api.ts` içinde. Derleme `tsc -b && vite build` olarak çalışır; tip hatası derlemeyi durdurur.
+- **Ortak katman:** `useApi` kancası (yükleniyor / veri / hata, panoda 5 sn'lik arka plan yenilemesi), `AsyncView` (iskelet / boş / hata / içerik), `Form` (gönderimde düğme kilitlenir, hata ya da sonuç formun altında gösterilir), `ActButton` (tablo içi eylem + bildirim).
+- **API istemcisi:** JWT ekler. 401'de refresh token ile tek seferlik yenileme yapar; eşzamanlı istekler aynı yenilemeyi paylaşır. Durum değiştiren POST isteklerine `Idempotency-Key` ekler. Vitest ile test edilir.
+- **Grafik:** Recharts yalnızca tahmin sayfasında kullanılır; ayrı pakette olduğu için ilk yükü artırmaz.
+- **Servis:** Çok aşamalı Docker derlemesi (`node:22-alpine` ile derle → `nginx-unprivileged` ile servis et). nginx `/api` ve `/auth` isteklerini API'ye vekil eder (tek origin, CORS gerekmez). Bilinmeyen yollar `index.html`'e düşer (derin bağlantılar çalışır). İçerik özetli `/assets/*` dosyaları uzun süre önbelleğe alınır. CSP `script-src 'self'`.
 
-**Gerekçe.** React, Vue gibi bir framework `npm install` ile derleme adımı ekler ve soğuk önbellekte dakikalar alabilir. Bu ekranlar ağırlıklı olarak form ve tablodan oluştuğu için framework'ün sağladığı kazanç sınırlı. Bedeli: bileşen yeniden kullanımı ve tip güvenliği daha zayıf. Ekran sayısı artarsa Svelte ya da Preact'e geçiş mantıklı olur.
+**Sonuçlar.** İlk yük ≈ 90 KB gzip, tahmin sayfası +117 KB. Docker'da ön yüz derlemesi soğuk önbellekte ≈ 1 dakika ekler; 5 dakikalık hedefin içinde kalır. CI'da ayrı bir `web` işi tip denetimi, test ve derleme yapar.
+
+**Alternatifler.** Vanilla JS (ilk sürüm) derleme gerektirmiyordu ama bileşen yeniden kullanımı ve tip güvenliği zayıftı. Next.js gibi SSR çerçeveleri bu iç kullanım uygulaması için gereksiz bir sunucu katmanı eklerdi. Vue ya da Svelte de uygun olurdu; React, ekosistem ve tip desteği nedeniyle seçildi.
+
+**Not.** React'e geçiş sırasında uçtan uca tarayıcı testi gerçek bir hatayı ortaya çıkardı: Tarayıcılar HTTP başlığında ASCII dışı karakter göndermez, bu yüzden Türkçe yazılmış erişim gerekçesi (`X-Access-Reason`) isteği daha göndermeden düşürüyordu. Ön yüz artık gerekçeyi yüzde-kodlayarak gönderiyor, sunucu çözüyor. `make verify` içindeki T-5 bu yolu da deniyor.
 
 ---
 

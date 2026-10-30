@@ -84,7 +84,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* Formlar */
 form.inline { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-end; }
 .field { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
-.field label { font-size: .8rem; color: var(--muted); font-weight: 600; }
+.field > span { font-size: .8rem; color: var(--muted); font-weight: 600; }
 input, select, textarea { font: inherit; padding: .45rem .55rem; border: 1px solid #cfcac2; border-radius: 8px; background: #fff; color: var(--ink); min-width: 0; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
 textarea { width: 100%; font-family: var(--mono); font-size: .82rem; }
@@ -131,3 +131,17 @@ button:disabled { opacity: .55; cursor: wait; }
   th, td { padding: .45rem .5rem; }
   .matrix { grid-template-columns: 52px repeat(8, 58px); }
 }
+
+/* React sürümü yardımcıları */
+.mt { margin-top: 1rem; }
+.mt-s { margin-top: .6rem; }
+.form-actions { margin-top: .75rem; }
+form.inline .form-actions { margin-top: 0; }
+form.inline { align-items: flex-end; }
+.span-all { grid-column: 1 / -1; }
+.login-form { margin-top: 1rem; gap: .75rem; }
+.chart { margin: .75rem 0; }
+details { margin-top: .5rem; }
+details summary { cursor: pointer; color: var(--muted); font-size: .9rem; margin-bottom: .4rem; }
+.nav a.active { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.demo-list .sub { margin-bottom: .6rem; }
